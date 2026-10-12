@@ -56,7 +56,11 @@ impl Chip8 {
         }
     }
 
-    fn load(&self) {}
+    // 0x200 == 512
+    fn load(&mut self, buffer_size: usize) {
+        let buffer = vec![buffer_size];
+        self.memory[512..].copy_from_slice(buffer.as_slice());
+    }
 
     fn emulate(&mut self) {
         self.opcode = self.memory[self.pc] << 8 | self.memory[self.pc + 1];
@@ -75,8 +79,6 @@ impl Chip8 {
         }
     }
 }
-
-// https://multigesture.net/articles/how-to-write-an-emulator-chip-8-interpreter/
 
 fn main() {
     let _chip8 = Chip8::new();
