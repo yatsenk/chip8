@@ -57,11 +57,21 @@ impl Chip8 {
     }
 
     // 0x200 == 512
-    fn load(&mut self, buffer_size: usize) {
-        let buffer = vec![buffer_size];
-        self.memory[512..].copy_from_slice(buffer.as_slice());
+    fn load(&mut self, buffer: &[usize]) {
+        self.memory[512..].copy_from_slice(buffer);
     }
 
+    /// example
+    ///
+    /// 0xA2       0xA2 << 8 = 0xA200   HEX
+    /// 10100010   1010001000000000     BIN
+    ///
+    /// bitwise or ( | ) operation
+    ///
+    /// 1010001000000000                // 0xA200
+    ///         11110000                // 0xF0 (0x00F0)
+    /// ----------------
+    /// 1010001011110000                // 0xA2F0
     fn emulate(&mut self) {
         self.opcode = self.memory[self.pc] << 8 | self.memory[self.pc + 1];
 
