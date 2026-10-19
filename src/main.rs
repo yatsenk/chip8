@@ -10,7 +10,7 @@ const WIDTH: usize = 64;
 const HEIGHT: usize = 32;
 const RAM: usize = 4096;
 
-const FONTSET: [usize; 80] = [
+const FONTSET: [u16; 80] = [
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
     0x20, 0x60, 0x20, 0x20, 0x70, // 1
     0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
@@ -30,13 +30,14 @@ const FONTSET: [usize; 80] = [
 ];
 
 struct Chip8 {
+    gfx: [bool; WIDTH * HEIGHT],
     opcode: u16,
     pc: u16,
     i: u16,
     v: [u16; 16],
     sp: u16,
     stack: [u16; 16],
-    memory: [usize; RAM],
+    memory: [u16; RAM],
     keypad: [u16; 16],
     delay_timer: u8,
     sound_timer: u8,
@@ -44,10 +45,11 @@ struct Chip8 {
 
 impl Chip8 {
     fn new() -> Self {
-        let mut memory: [usize; RAM] = [0; RAM];
+        let mut memory: [u16; RAM] = [0; RAM];
         memory[..80].copy_from_slice(&FONTSET);
 
         Self {
+            gfx: [false; WIDTH * HEIGHT],
             opcode: 0,
             pc: 0x200,
             i: 0,
@@ -62,8 +64,9 @@ impl Chip8 {
     }
 
     // 0x200 == 512
-    fn load(&mut self, buffer: &[usize]) {
-        self.memory[512..].copy_from_slice(buffer);
+    fn load(&mut self, buffer: &[u16]) {
+        let end = buffer.len();
+        self.memory[512..end].copy_from_slice(buffer);
     }
 
     /// example
@@ -78,14 +81,15 @@ impl Chip8 {
     /// ----------------
     /// 1010001011110000                // 0xA2F0
     fn emulate(&mut self) {
-        self.opcode = (self.memory[self.pc as usize] as u16) << 8
-            | (self.memory[(self.pc + 1) as usize]) as u16;
+        self.opcode = self.memory[self.pc as usize] << 8 | self.memory[(self.pc + 1) as usize];
 
         match self.opcode & 0xF000 {
+            // 0xA000: Sets I to the address NNN
             0xA000 => {
                 self.i = self.opcode & 0x0FFF;
                 self.pc += 2;
             }
+            // 0x2000: Calls subroutine at NNN
             0x2000 => {
                 self.stack[self.sp as usize] = self.pc;
                 self.sp += 1;
@@ -93,10 +97,10 @@ impl Chip8 {
             }
             0x0000 => {
                 match self.opcode & 0x000F {
-                    0x0000 => { // 0x00E0: Clears the screen
-                    }
-                    0x000E => { // 0x00EE: Returns from subroutine 
-                    }
+                    // 0x00E0: Clears the screen
+                    0x0000 => {}
+                    // 0x00EE: Returns from subroutine
+                    0x000E => {}
                     _ => panic!("unimplemented opcode"),
                 }
             }
