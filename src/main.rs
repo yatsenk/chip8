@@ -1,5 +1,10 @@
 #![allow(unused)]
-use minifb::{Key, Window, WindowOptions};
+use core::panic;
+
+use minifb::{
+    Key::{self, P},
+    Window, WindowOptions,
+};
 
 const WIDTH: usize = 64;
 const HEIGHT: usize = 32;
@@ -25,14 +30,14 @@ const FONTSET: [usize; 80] = [
 ];
 
 struct Chip8 {
-    opcode: usize,
-    pc: usize,
-    i: usize,
-    v: [usize; 16],
-    sp: usize,
-    stack: [usize; 16],
+    opcode: u16,
+    pc: u16,
+    i: u16,
+    v: [u16; 16],
+    sp: u16,
+    stack: [u16; 16],
     memory: [usize; RAM],
-    keypad: [usize; 16],
+    keypad: [u16; 16],
     delay_timer: u8,
     sound_timer: u8,
 }
@@ -73,7 +78,8 @@ impl Chip8 {
     /// ----------------
     /// 1010001011110000                // 0xA2F0
     fn emulate(&mut self) {
-        self.opcode = self.memory[self.pc] << 8 | self.memory[self.pc + 1];
+        self.opcode = (self.memory[self.pc as usize] as u16) << 8
+            | (self.memory[(self.pc + 1) as usize]) as u16;
 
         match self.opcode & 0xF000 {
             0xA000 => {
@@ -81,11 +87,31 @@ impl Chip8 {
                 self.pc += 2;
             }
             0x2000 => {
-                self.stack[self.sp] = self.pc;
+                self.stack[self.sp as usize] = self.pc;
                 self.sp += 1;
                 self.pc = self.opcode & 0x0FFF;
             }
-            _ => todo!(),
+            0x0000 => {
+                match self.opcode & 0x000F {
+                    0x0000 => { // 0x00E0: Clears the screen
+                    }
+                    0x000E => { // 0x00EE: Returns from subroutine 
+                    }
+                    _ => panic!("unimplemented opcode"),
+                }
+            }
+            _ => panic!("unimplemented opcode"),
+        }
+
+        if self.delay_timer > 0 {
+            self.delay_timer -= 1;
+        }
+
+        if self.sound_timer > 0 {
+            if self.sound_timer == 1 {
+                println!("BEEP!");
+            }
+            self.sound_timer -= 1;
         }
     }
 }
