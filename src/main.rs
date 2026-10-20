@@ -73,33 +73,59 @@ impl Chip8 {
         self.opcode = self.memory[self.pc as usize] << 8 | self.memory[(self.pc + 1) as usize];
 
         match self.opcode & 0xF000 {
-            // 0xA000: Sets I to the address NNN
-            0xA000 => {
-                self.i = self.opcode & 0x0FFF;
-                self.pc += 2;
+            // Jumps to address NNN
+            0x1000 => {
+                self.pc = self.opcode & 0x0FFF;
             }
-            // 0xB000: Jumps to the address NNN plus V0
-            0xB000 => {}
-            // 0x1000: Jumps to address NNN
-            0x1000 => {}
             // 0x2000: Calls subroutine at NNN
             0x2000 => {
                 self.stack[self.sp as usize] = self.pc;
                 self.sp += 1;
                 self.pc = self.opcode & 0x0FFF;
             }
-            0x0000 => {
-                match self.opcode & 0x000F {
-                    // 0x00E0: Clears the screen
-                    0x0000 => {
-                        self.gfx = [false; WIDTH * HEIGHT];
-                        self.pc += 2;
-                    }
-                    // 0x00EE: Returns from subroutine
-                    0x000E => {}
-                    _ => panic!("unimplemented opcode"),
+            // Skips the next instruction if VX
+            // equals NN (usually the next instruction
+            // is a jump to skip a code block)
+            0x3000 => {
+                if self.v[((self.opcode & 0x0F00) >> 8) as usize] == self.opcode & 0x0FF {
+                    self.pc += 4;
+                } else {
+                    self.pc += 2;
                 }
             }
+            // Skips the next instruction if VX
+            // does not equal NN (usually the next instruction
+            // is a jump to skip a code block)
+            0x4000 => {
+                if self.v[((self.opcode & 0x0F00) >> 8) as usize] != self.opcode & 0x00FF {
+                    self.pc += 4;
+                } else {
+                    self.pc += 2;
+                }
+            }
+            // Skips the next instruction if VX equals VY
+            // (usually the next instruction is a jump to
+            // skip a code block)
+            0x5000 => {
+                if self.v[((self.opcode & 0x0F00) >> 8) as usize]
+                    == self.v[((self.opcode & 0x00F0) >> 4) as usize]
+                {
+                    self.pc += 4;
+                } else {
+                    self.pc += 2;
+                }
+            }
+            // Sets VX to NN
+            0x6000 => {
+                self.v[((self.opcode & 0x0F00) >> 8) as usize] = self.opcode & 0x00FF;
+                self.pc += 2;
+            }
+            // Adds NN to VX (carry flag is not changed)
+            0x7000 => {
+                self.v[((self.opcode & 0x0F00) >> 8) as usize] += self.opcode & 0x00FF;
+                self.pc += 2;
+            }
+            // 8XYN
             0x8000 => {
                 let x = ((self.opcode & 0x0F00) >> 8) as usize;
                 let y = ((self.opcode & 0x00F0) >> 4) as usize;
@@ -176,6 +202,131 @@ impl Chip8 {
                         self.v[x] <<= 1;
                         self.pc += 2;
                     }
+                    _ => panic!("unimplemented opcode"),
+                }
+            }
+            // Skips the next instruction if VX does not
+            // equal VY. (Usually the next instruction is
+            // a jump to skip a code block)
+            0x9000 => {
+                if self.v[((self.opcode & 0x0F00) >> 8) as usize]
+                    != self.v[((self.opcode & 0x00F0) >> 4) as usize]
+                {
+                    self.pc += 4;
+                } else {
+                    self.pc += 2;
+                }
+            }
+            // 0xA000: Sets I to the address NNN
+            0xA000 => {
+                self.i = self.opcode & 0x0FFF;
+                self.pc += 2;
+            }
+            // 0xB000: Jumps to the address NNN plus V0
+            0xB000 => {
+                self.pc = (self.opcode & 0x0FFF) + self.v[0x0];
+            }
+            // Sets VX to the result of a bitwise and
+            // operation on a random number
+            // (Typically: 0 to 255) and NN
+            0xC000 => {
+                // todo: random number instead of 42
+                self.v[((self.opcode & 0x0F00) >> 8) as usize] = 42 & (self.opcode & 0x00FF);
+            }
+            // Draws a sprite at coordinate (VX, VY) that
+            // has a width of 8 pixels and a height of N pixels.
+            // Each row of 8 pixels is read as bit-coded
+            // starting from memory location I; I value does not
+            // change after the execution of this instruction.
+            // As described above, VF is set to 1 if any screen
+            // pixels are flipped from set to unset when
+            // the sprite is drawn, and to 0 if that does not happen
+            0xD000 => {}
+            // EX__
+            0xE000 => {
+                match self.opcode & 0x00FF {
+                    // Skips the next instruction if the key stored
+                    // in VX(only consider the lowest nibble)
+                    // is pressed (usually the next instruction
+                    // is a jump to skip a code block)
+                    0x009E => {
+                        if self.keypad[self.v[((self.opcode & 0x0F00) >> 8) as usize] as usize] != 0
+                        {
+                            self.pc += 4;
+                        } else {
+                            self.pc += 2;
+                        }
+                    }
+                    // Skips the next instruction if the key
+                    // stored in VX(only consider the lowest nibble)
+                    // is not pressed (usually the next instruction
+                    // is a jump to skip a code block)
+                    0x00A1 => {
+                        if self.keypad[self.v[((self.opcode & 0x0F00) >> 8) as usize] as usize] == 0
+                        {
+                            self.pc += 4;
+                        } else {
+                            self.pc += 2;
+                        }
+                    }
+                    _ => panic!("unimplemented opcode"),
+                }
+            }
+            // FX__
+            0xF000 => {
+                match self.opcode & 0x00FF {
+                    // Sets VX to the value of the delay timer
+                    0x0007 => {
+                        self.v[((self.opcode & 0x0F00) >> 8) as usize] = self.delay_timer as u16;
+                    }
+                    // A key press is awaited, and then stored in VX
+                    // (blocking operation, all instruction halted until next key event,
+                    // delay and sound timers should continue processing)
+                    0x000A => {
+                        let mut key_pressed = false;
+
+                        for i in 0..16 {
+                            if self.keypad[i] != 0 {
+                                self.v[((self.opcode & 0x0F00) >> 8) as usize] = i as u16;
+                                key_pressed = true;
+                            }
+                        }
+
+                        if !key_pressed {
+                            return;
+                        }
+
+                        self.pc += 2;
+                    }
+                    // Sets the delay timer to VX
+                    0x0015 => {
+                        self.delay_timer = self.v[((self.opcode & 0x0F00) >> 8) as usize] as u8;
+                        self.pc += 2;
+                    }
+                    // Sets the sound timer to VX
+                    0x0018 => {
+                        self.sound_timer = self.v[((self.opcode & 0x0F00) >> 8) as usize] as u8;
+                        self.pc += 2;
+                    }
+                    // Adds VX to I. VF is not affected
+                    0x001E => {
+                        // ????
+                        self.i += self.v[((self.opcode & 0x0F00) >> 8) as usize];
+                        self.pc += 2;
+                    }
+                    _ => panic!("unimplemented opcode"),
+                }
+            }
+            // 00__
+            0x0000 => {
+                match self.opcode & 0x000F {
+                    // 0x00E0: Clears the screen
+                    0x0000 => {
+                        self.gfx = [false; WIDTH * HEIGHT];
+                        self.pc += 2;
+                    }
+                    // 0x00EE: Returns from subroutine
+                    0x000E => {}
                     _ => panic!("unimplemented opcode"),
                 }
             }
