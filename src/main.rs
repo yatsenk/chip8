@@ -141,12 +141,18 @@ impl Chip8 {
                     // when there's an underflow, and 1 when there is not.
                     // (i.e. VF set to 1 if VX >= VY and 0 if not)
                     0x0005 => {
+                        if self.v[x] >= self.v[y] {
+                            self.v[0xF] = 1;
+                        } else {
+                            self.v[0xF] = 0;
+                        }
                         self.v[x] -= self.v[y];
                         self.pc += 2;
                     }
                     // Shifts VX to the right by 1, then stores the least
                     // significant bit of VX prior to the shift into VF
                     0x0006 => {
+                        self.v[0xF] = self.v[x] & 0x1;
                         self.v[x] >>= 1;
                         self.pc += 2;
                     }
@@ -154,6 +160,11 @@ impl Chip8 {
                     // there's an underflow, and 1 when there is not.
                     // (i.e. VF set to 1 if VY >= VX)
                     0x0007 => {
+                        if self.v[y] >= self.v[x] {
+                            self.v[0xF] = 1;
+                        } else {
+                            self.v[0xF] = 0;
+                        }
                         self.v[x] = self.v[y] - self.v[x];
                         self.pc += 2;
                     }
@@ -161,6 +172,7 @@ impl Chip8 {
                     // if the most significant bit of VX prior to that
                     // shift was set, or to 0 if it was unset
                     0x000E => {
+                        self.v[0xF] = self.v[x] >> 7;
                         self.v[x] <<= 1;
                         self.pc += 2;
                     }
