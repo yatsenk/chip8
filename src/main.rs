@@ -69,17 +69,6 @@ impl Chip8 {
         self.memory[512..end].copy_from_slice(buffer);
     }
 
-    /// example
-    ///
-    /// 0xA2       0xA2 << 8 = 0xA200   HEX
-    /// 10100010   1010001000000000     BIN
-    ///
-    /// bitwise or ( | ) operation
-    ///
-    /// 1010001000000000                // 0xA200
-    ///         11110000                // 0xF0 (0x00F0)
-    /// ----------------
-    /// 1010001011110000                // 0xA2F0
     fn emulate(&mut self) {
         self.opcode = self.memory[self.pc as usize] << 8 | self.memory[(self.pc + 1) as usize];
 
@@ -121,34 +110,56 @@ impl Chip8 {
                         self.v[x] = self.v[y];
                         self.pc += 2;
                     }
+                    // Sets VX to VX or VY. (bitwise OR operation)
                     0x0001 => {
                         self.v[x] |= self.v[y];
                         self.pc += 2;
                     }
+                    // Sets VX to VX and VY. (bitwise AND operation)
                     0x0002 => {
                         self.v[x] &= self.v[y];
                         self.pc += 2;
                     }
+                    // Sets VX to VX xor VY
                     0x0003 => {
                         self.v[x] ^= self.v[y];
                         self.pc += 2;
                     }
+                    // Adds VY to VX. VF is set to 1 when there's an overflow,
+                    // and to 0 when there is not
                     0x0004 => {
                         self.v[x] += self.v[y];
+                        // Vy > 255 - Vx
+                        if self.v[y] > 0xFF - self.v[x] {
+                            self.v[0xF] = 1;
+                        } else {
+                            self.v[0xF] = 0;
+                        }
                         self.pc += 2;
                     }
+                    // VY is subtracted from VX. VF is set to 0
+                    // when there's an underflow, and 1 when there is not.
+                    // (i.e. VF set to 1 if VX >= VY and 0 if not)
                     0x0005 => {
                         self.v[x] -= self.v[y];
                         self.pc += 2;
                     }
+                    // Shifts VX to the right by 1, then stores the least
+                    // significant bit of VX prior to the shift into VF
                     0x0006 => {
                         self.v[x] >>= 1;
                         self.pc += 2;
                     }
+                    // Sets VX to VY minus VX. VF is set to 0 when
+                    // there's an underflow, and 1 when there is not.
+                    // (i.e. VF set to 1 if VY >= VX)
                     0x0007 => {
                         self.v[x] = self.v[y] - self.v[x];
                         self.pc += 2;
                     }
+                    // Shifts VX to the left by 1, then sets VF to 1
+                    // if the most significant bit of VX prior to that
+                    // shift was set, or to 0 if it was unset
                     0x000E => {
                         self.v[x] <<= 1;
                         self.pc += 2;
