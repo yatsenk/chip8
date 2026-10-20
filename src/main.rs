@@ -89,6 +89,10 @@ impl Chip8 {
                 self.i = self.opcode & 0x0FFF;
                 self.pc += 2;
             }
+            // 0xB000: Jumps to the address NNN plus V0
+            0xB000 => {}
+            // 0x1000: Jumps to address NNN
+            0x1000 => {}
             // 0x2000: Calls subroutine at NNN
             0x2000 => {
                 self.stack[self.sp as usize] = self.pc;
@@ -98,9 +102,57 @@ impl Chip8 {
             0x0000 => {
                 match self.opcode & 0x000F {
                     // 0x00E0: Clears the screen
-                    0x0000 => {}
+                    0x0000 => {
+                        self.gfx = [false; WIDTH * HEIGHT];
+                        self.pc += 2;
+                    }
                     // 0x00EE: Returns from subroutine
                     0x000E => {}
+                    _ => panic!("unimplemented opcode"),
+                }
+            }
+            0x8000 => {
+                let x = ((self.opcode & 0x0F00) >> 8) as usize;
+                let y = ((self.opcode & 0x00F0) >> 4) as usize;
+
+                match self.opcode & 0x000F {
+                    // Sets VX to the value of VY
+                    0x0000 => {
+                        self.v[x] = self.v[y];
+                        self.pc += 2;
+                    }
+                    0x0001 => {
+                        self.v[x] |= self.v[y];
+                        self.pc += 2;
+                    }
+                    0x0002 => {
+                        self.v[x] &= self.v[y];
+                        self.pc += 2;
+                    }
+                    0x0003 => {
+                        self.v[x] ^= self.v[y];
+                        self.pc += 2;
+                    }
+                    0x0004 => {
+                        self.v[x] += self.v[y];
+                        self.pc += 2;
+                    }
+                    0x0005 => {
+                        self.v[x] -= self.v[y];
+                        self.pc += 2;
+                    }
+                    0x0006 => {
+                        self.v[x] >>= 1;
+                        self.pc += 2;
+                    }
+                    0x0007 => {
+                        self.v[x] = self.v[y] - self.v[x];
+                        self.pc += 2;
+                    }
+                    0x000E => {
+                        self.v[x] <<= 1;
+                        self.pc += 2;
+                    }
                     _ => panic!("unimplemented opcode"),
                 }
             }
