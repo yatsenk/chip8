@@ -1,6 +1,4 @@
 #![allow(unused)]
-use core::panic;
-
 use minifb::{
     Key::{self, P},
     Window, WindowOptions,
@@ -310,8 +308,51 @@ impl Chip8 {
                     }
                     // Adds VX to I. VF is not affected
                     0x001E => {
-                        // ????
+                        // ???
                         self.i += self.v[((self.opcode & 0x0F00) >> 8) as usize];
+                        self.pc += 2;
+                    }
+                    // Sets I to the location of the sprite
+                    // for the character in VX (only consider
+                    // the lowest nibble). Characters 0-F
+                    // (in hexadecimal) are represented by a 4x5 font
+                    0x0029 => {
+                        self.i = self.v[((self.opcode & 0x0F00) >> 8) as usize] * 0x5;
+                        self.pc += 2;
+                    }
+                    // Stores the binary-coded decimal representation
+                    // of VX, with the hundreds digit in memory at location
+                    // in I, the tens digit at location I+1, and
+                    // the ones digit at location I+2
+                    0x0033 => {
+                        self.memory[self.i as usize] =
+                            self.v[((self.opcode & 0x0F00) >> 8) as usize] / 100;
+                        self.memory[(self.i + 1) as usize] =
+                            (self.v[((self.opcode & 0x0F00) >> 8) as usize] / 10) % 10;
+                        self.memory[(self.i + 2) as usize] =
+                            self.v[((self.opcode & 0x0F00) >> 8) as usize] % 10;
+                        self.pc += 2;
+                    }
+                    // Stores from V0 to VX (including VX) in memory, starting
+                    // at address I. The offset from I is increased by 1 for
+                    // each value written, but I itself is left unmodified
+                    0x0055 => {
+                        for i in 0..=((self.opcode & 0x0F00) >> 8) as usize {
+                            self.memory[(self.i as usize) + 1] = self.v[i];
+                        }
+                        // ???
+                        self.i += ((self.opcode & 0x0F00) >> 8) + 1;
+                        self.pc += 2;
+                    }
+                    // Fills from V0 to VX (including VX) with values from memory,
+                    // starting at address I. The offset from I is increased by 1
+                    // for each value read, but I itself is left unmodified
+                    0x0065 => {
+                        for i in 0..=((self.opcode & 0x0F00) >> 8) as usize {
+                            self.v[i] = self.memory[(self.i as usize) + 1];
+                        }
+                        // ???
+                        self.i += ((self.opcode & 0x0F00) >> 8) + 1;
                         self.pc += 2;
                     }
                     _ => panic!("unimplemented opcode"),
@@ -326,7 +367,11 @@ impl Chip8 {
                         self.pc += 2;
                     }
                     // 0x00EE: Returns from subroutine
-                    0x000E => {}
+                    0x000E => {
+                        self.sp -= 1;
+                        self.pc = self.stack[self.sp as usize];
+                        self.pc += 2;
+                    }
                     _ => panic!("unimplemented opcode"),
                 }
             }
