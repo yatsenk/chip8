@@ -28,7 +28,7 @@ const FONTSET: [u16; 80] = [
 ];
 
 struct Chip8 {
-    gfx: [bool; WIDTH * HEIGHT],
+    gfx: [u8; WIDTH * HEIGHT],
     opcode: u16,
     pc: u16,
     i: u16,
@@ -47,7 +47,7 @@ impl Chip8 {
         memory[..80].copy_from_slice(&FONTSET);
 
         Self {
-            gfx: [false; WIDTH * HEIGHT],
+            gfx: [0u8; WIDTH * HEIGHT],
             opcode: 0,
             pc: 0x200,
             i: 0,
@@ -71,6 +71,23 @@ impl Chip8 {
         self.opcode = self.memory[self.pc as usize] << 8 | self.memory[(self.pc + 1) as usize];
 
         match self.opcode & 0xF000 {
+            // 0x00__
+            0x0000 => {
+                match self.opcode & 0x000F {
+                    // 0x00E0: Clears the screen
+                    0x0000 => {
+                        self.gfx = [0; WIDTH * HEIGHT];
+                        self.pc += 2;
+                    }
+                    // 0x00EE: Returns from subroutine
+                    0x000E => {
+                        self.sp -= 1;
+                        self.pc = self.stack[self.sp as usize];
+                        self.pc += 2;
+                    }
+                    _ => panic!("unimplemented opcode"),
+                }
+            }
             // Jumps to address NNN
             0x1000 => {
                 self.pc = self.opcode & 0x0FFF;
@@ -358,23 +375,6 @@ impl Chip8 {
                     _ => panic!("unimplemented opcode"),
                 }
             }
-            // 00__
-            0x0000 => {
-                match self.opcode & 0x000F {
-                    // 0x00E0: Clears the screen
-                    0x0000 => {
-                        self.gfx = [false; WIDTH * HEIGHT];
-                        self.pc += 2;
-                    }
-                    // 0x00EE: Returns from subroutine
-                    0x000E => {
-                        self.sp -= 1;
-                        self.pc = self.stack[self.sp as usize];
-                        self.pc += 2;
-                    }
-                    _ => panic!("unimplemented opcode"),
-                }
-            }
             _ => panic!("unimplemented opcode"),
         }
 
@@ -393,4 +393,20 @@ impl Chip8 {
 
 fn main() {
     let _chip8 = Chip8::new();
+
+    let mut window = Window::new(
+        "Chip8 emulator",
+        WIDTH * 10,
+        HEIGHT * 10,
+        WindowOptions::default(),
+    )
+    .unwrap_or_else(|e| {
+        panic!("{}", e);
+    });
+
+    window.set_target_fps(60);
+
+    while window.is_open() {
+        window.update();
+    }
 }
