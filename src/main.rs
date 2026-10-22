@@ -81,8 +81,8 @@ impl Chip8 {
     }
 
     fn emulate(&mut self) {
-        self.opcode =
-            (self.memory[self.pc as usize] << 8 | self.memory[(self.pc + 1) as usize]) as u16;
+        self.opcode = ((self.memory[self.pc as usize] as u16) << 8
+            | (self.memory[(self.pc + 1) as usize]) as u16);
 
         match self.opcode & 0xF000 {
             // 00__
@@ -283,7 +283,7 @@ impl Chip8 {
                         if pixel & (0x80 >> xline) != 0
                             && self.gfx[(x + xline + (y + xline) * 64) as usize] == 1
                         {
-                            self.v[0xF] = 1;
+                            self.v[0xF] = 1
                         }
                         self.gfx[(x + xline + ((y + yline) * 64)) as usize] ^= 1;
                     }
