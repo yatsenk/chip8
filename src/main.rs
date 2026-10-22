@@ -1,4 +1,8 @@
 #![allow(unused)]
+use std::io;
+use std::path::Path;
+use std::{fs::File, io::Read};
+
 use minifb::{
     Key::{self, P},
     Window, WindowOptions,
@@ -8,7 +12,7 @@ const WIDTH: usize = 64;
 const HEIGHT: usize = 32;
 const RAM: usize = 4096;
 
-const FONTSET: [u16; 80] = [
+const FONTSET: [u8; 80] = [
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
     0x20, 0x60, 0x20, 0x20, 0x70, // 1
     0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
@@ -32,10 +36,10 @@ struct Chip8 {
     opcode: u16,
     pc: u16,
     i: u16,
-    v: [u16; 16],
+    v: [u8; 16],
     sp: u16,
     stack: [u16; 16],
-    memory: [u16; RAM],
+    memory: [u8; RAM],
     keypad: [u16; 16],
     delay_timer: u8,
     sound_timer: u8,
@@ -43,7 +47,7 @@ struct Chip8 {
 
 impl Chip8 {
     fn new() -> Self {
-        let mut memory: [u16; RAM] = [0; RAM];
+        let mut memory: [u8; RAM] = [0; RAM];
         memory[..80].copy_from_slice(&FONTSET);
 
         Self {
@@ -62,13 +66,21 @@ impl Chip8 {
     }
 
     // 0x200 == 512
-    fn load(&mut self, buffer: &[u16]) {
-        let end = buffer.len();
-        self.memory[512..end].copy_from_slice(buffer);
+    fn load<P: AsRef<Path>>(&mut self, path_to_file: P) {
+        let mut f = match File::open(path_to_file) {
+            Ok(f) => f,
+            Err(e) => panic!("cannot open a file: {}", e),
+        };
+
+        let mut buffer = vec![];
+        f.read_to_end(&mut buffer);
+
+        self.memory[512..buffer.len()].copy_from_slice(&buffer);
     }
 
     fn emulate(&mut self) {
-        self.opcode = self.memory[self.pc as usize] << 8 | self.memory[(self.pc + 1) as usize];
+        self.opcode =
+            (self.memory[self.pc as usize] << 8 | self.memory[(self.pc + 1) as usize]) as u16;
 
         match self.opcode & 0xF000 {
             // 0x00__
@@ -102,7 +114,7 @@ impl Chip8 {
             // equals NN (usually the next instruction
             // is a jump to skip a code block)
             0x3000 => {
-                if self.v[((self.opcode & 0x0F00) >> 8) as usize] == self.opcode & 0x0FF {
+                if self.v[((self.opcode & 0x0F00) >> 8) as usize] == (self.opcode & 0x0FF) as u8 {
                     self.pc += 4;
                 } else {
                     self.pc += 2;
@@ -112,7 +124,7 @@ impl Chip8 {
             // does not equal NN (usually the next instruction
             // is a jump to skip a code block)
             0x4000 => {
-                if self.v[((self.opcode & 0x0F00) >> 8) as usize] != self.opcode & 0x00FF {
+                if self.v[((self.opcode & 0x0F00) >> 8) as usize] != (self.opcode & 0x00FF) as u8 {
                     self.pc += 4;
                 } else {
                     self.pc += 2;
@@ -132,12 +144,12 @@ impl Chip8 {
             }
             // Sets VX to NN
             0x6000 => {
-                self.v[((self.opcode & 0x0F00) >> 8) as usize] = self.opcode & 0x00FF;
+                self.v[((self.opcode & 0x0F00) >> 8) as usize] = (self.opcode & 0x00FF) as u8;
                 self.pc += 2;
             }
             // Adds NN to VX (carry flag is not changed)
             0x7000 => {
-                self.v[((self.opcode & 0x0F00) >> 8) as usize] += self.opcode & 0x00FF;
+                self.v[((self.opcode & 0x0F00) >> 8) as usize] += (self.opcode & 0x00FF) as u8;
                 self.pc += 2;
             }
             // 8XYN
@@ -239,14 +251,14 @@ impl Chip8 {
             }
             // 0xB000: Jumps to the address NNN plus V0
             0xB000 => {
-                self.pc = (self.opcode & 0x0FFF) + self.v[0x0];
+                self.pc = (self.opcode & 0x0FFF) + self.v[0x0] as u16;
             }
             // Sets VX to the result of a bitwise and
             // operation on a random number
             // (Typically: 0 to 255) and NN
             0xC000 => {
                 // todo: random number instead of 42
-                self.v[((self.opcode & 0x0F00) >> 8) as usize] = 42 & (self.opcode & 0x00FF);
+                self.v[((self.opcode & 0x0F00) >> 8) as usize] = 42 & (self.opcode & 0x00FF) as u8;
             }
             // Draws a sprite at coordinate (VX, VY) that
             // has a width of 8 pixels and a height of N pixels.
@@ -292,7 +304,7 @@ impl Chip8 {
                 match self.opcode & 0x00FF {
                     // Sets VX to the value of the delay timer
                     0x0007 => {
-                        self.v[((self.opcode & 0x0F00) >> 8) as usize] = self.delay_timer as u16;
+                        self.v[((self.opcode & 0x0F00) >> 8) as usize] = self.delay_timer;
                     }
                     // A key press is awaited, and then stored in VX
                     // (blocking operation, all instruction halted until next key event,
@@ -302,7 +314,7 @@ impl Chip8 {
 
                         for i in 0..16 {
                             if self.keypad[i] != 0 {
-                                self.v[((self.opcode & 0x0F00) >> 8) as usize] = i as u16;
+                                self.v[((self.opcode & 0x0F00) >> 8) as usize] = i as u8;
                                 key_pressed = true;
                             }
                         }
@@ -315,18 +327,18 @@ impl Chip8 {
                     }
                     // Sets the delay timer to VX
                     0x0015 => {
-                        self.delay_timer = self.v[((self.opcode & 0x0F00) >> 8) as usize] as u8;
+                        self.delay_timer = self.v[((self.opcode & 0x0F00) >> 8) as usize];
                         self.pc += 2;
                     }
                     // Sets the sound timer to VX
                     0x0018 => {
-                        self.sound_timer = self.v[((self.opcode & 0x0F00) >> 8) as usize] as u8;
+                        self.sound_timer = self.v[((self.opcode & 0x0F00) >> 8) as usize];
                         self.pc += 2;
                     }
                     // Adds VX to I. VF is not affected
                     0x001E => {
                         // ???
-                        self.i += self.v[((self.opcode & 0x0F00) >> 8) as usize];
+                        self.i += self.v[((self.opcode & 0x0F00) >> 8) as usize] as u16;
                         self.pc += 2;
                     }
                     // Sets I to the location of the sprite
@@ -334,7 +346,7 @@ impl Chip8 {
                     // the lowest nibble). Characters 0-F
                     // (in hexadecimal) are represented by a 4x5 font
                     0x0029 => {
-                        self.i = self.v[((self.opcode & 0x0F00) >> 8) as usize] * 0x5;
+                        self.i = (self.v[((self.opcode & 0x0F00) >> 8) as usize] * 0x5) as u16;
                         self.pc += 2;
                     }
                     // Stores the binary-coded decimal representation
