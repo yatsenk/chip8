@@ -43,6 +43,7 @@ struct Chip8 {
     keypad: [u16; 16],
     delay_timer: u8,
     sound_timer: u8,
+    draw_flag: bool,
 }
 
 impl Chip8 {
@@ -62,10 +63,10 @@ impl Chip8 {
             keypad: [0; 16],
             delay_timer: 0,
             sound_timer: 0,
+            draw_flag: false,
         }
     }
 
-    // 0x200 == 512
     fn load<P: AsRef<Path>>(&mut self, path_to_file: P) {
         let mut f = match File::open(path_to_file) {
             Ok(f) => f,
@@ -75,6 +76,7 @@ impl Chip8 {
         let mut buffer = vec![];
         f.read_to_end(&mut buffer);
 
+        // 0x200 = 512
         self.memory[512..buffer.len()].copy_from_slice(&buffer);
     }
 
@@ -83,15 +85,15 @@ impl Chip8 {
             (self.memory[self.pc as usize] << 8 | self.memory[(self.pc + 1) as usize]) as u16;
 
         match self.opcode & 0xF000 {
-            // 0x00__
+            // 00__
             0x0000 => {
                 match self.opcode & 0x000F {
-                    // 0x00E0: Clears the screen
+                    // Clears the screen
                     0x0000 => {
                         self.gfx = [0; WIDTH * HEIGHT];
                         self.pc += 2;
                     }
-                    // 0x00EE: Returns from subroutine
+                    // Returns from subroutine
                     0x000E => {
                         self.sp -= 1;
                         self.pc = self.stack[self.sp as usize];
@@ -104,7 +106,7 @@ impl Chip8 {
             0x1000 => {
                 self.pc = self.opcode & 0x0FFF;
             }
-            // 0x2000: Calls subroutine at NNN
+            // Calls subroutine at NNN
             0x2000 => {
                 self.stack[self.sp as usize] = self.pc;
                 self.sp += 1;
@@ -152,7 +154,7 @@ impl Chip8 {
                 self.v[((self.opcode & 0x0F00) >> 8) as usize] += (self.opcode & 0x00FF) as u8;
                 self.pc += 2;
             }
-            // 8XYN
+            // 8XY_
             0x8000 => {
                 let x = ((self.opcode & 0x0F00) >> 8) as usize;
                 let y = ((self.opcode & 0x00F0) >> 4) as usize;
@@ -244,12 +246,12 @@ impl Chip8 {
                     self.pc += 2;
                 }
             }
-            // 0xA000: Sets I to the address NNN
+            // Sets I to the address NNN
             0xA000 => {
                 self.i = self.opcode & 0x0FFF;
                 self.pc += 2;
             }
-            // 0xB000: Jumps to the address NNN plus V0
+            // Jumps to the address NNN plus V0
             0xB000 => {
                 self.pc = (self.opcode & 0x0FFF) + self.v[0x0] as u16;
             }
@@ -268,7 +270,28 @@ impl Chip8 {
             // As described above, VF is set to 1 if any screen
             // pixels are flipped from set to unset when
             // the sprite is drawn, and to 0 if that does not happen
-            0xD000 => {}
+            0xD000 => {
+                let x = (self.opcode & 0x0F00) >> 8;
+                let y = (self.opcode & 0x00F0) >> 4;
+                let height = (self.opcode & 0x000F);
+                let mut pixel: u16;
+
+                self.v[0xF] = 0;
+                for yline in 0..height {
+                    pixel = self.memory[(self.i + yline) as usize] as u16;
+                    for xline in 0..8 {
+                        if pixel & (0x80 >> xline) != 0
+                            && self.gfx[(x + xline + (y + xline) * 64) as usize] == 1
+                        {
+                            self.v[0xF] = 1;
+                        }
+                        self.gfx[(x + xline + ((y + yline) * 64)) as usize] ^= 1;
+                    }
+                }
+
+                self.draw_flag = true;
+                self.pc += 2;
+            }
             // EX__
             0xE000 => {
                 match self.opcode & 0x00FF {
