@@ -1,15 +1,15 @@
 mod constants;
 mod emulator;
 
+use core::panic;
+
 use minifb::{Key, KeyRepeat, ScaleMode, Window, WindowOptions};
 
 fn main() {
-    let _chip8 = emulator::Chip8::new();
+    let mut chip8 = emulator::Chip8::new();
 
     let mut buffer = vec![0u32; constants::WIDTH * constants::HEIGHT];
-
     let mut text = Text::new(buffer.clone(), 20, 20, 10, 0x0000FF00);
-
     let mut window = Window::new(
         "Chip8 emulator - press ESC to exit",
         constants::WIDTH * 10,
@@ -25,8 +25,11 @@ fn main() {
     });
 
     window.set_target_fps(60);
-
     let mut size = (0, 0);
+
+    if let Err(e) = chip8.load("roms/") {
+        eprintln!("error occured: {}", e);
+    }
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
         let new_size = window.get_size();
@@ -35,27 +38,15 @@ fn main() {
             buffer.resize(size.0 * size.1, 0);
         }
 
+        chip8.emulate_cycle();
+
         window
             .get_keys_pressed(KeyRepeat::No)
             .iter()
             .for_each(|key| match key {
-                Key::Key0 => text.draw(0),
-                Key::Key1 => text.draw(1),
-                Key::Key2 => text.draw(2),
-                Key::Key3 => text.draw(3),
-                Key::Key4 => text.draw(4),
-                Key::Key5 => text.draw(5),
-                Key::Key6 => text.draw(6),
-                Key::Key7 => text.draw(7),
-                Key::Key8 => text.draw(8),
-                Key::Key9 => text.draw(9),
-                Key::A => text.draw(10),
-                Key::B => text.draw(11),
-                Key::C => text.draw(12),
-                Key::D => text.draw(13),
-                Key::E => text.draw(14),
-                Key::F => text.draw(15),
-                _ => (),
+                Key::Key0 => chip8.keypad[0] = 1,
+                // implement next ...
+                _ => panic!("unimplemeted key"),
             });
 
         window
