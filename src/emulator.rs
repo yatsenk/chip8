@@ -234,6 +234,7 @@ impl Chip8 {
             0xC000 => {
                 // todo: random number instead of 42
                 self.v[((self.opcode & 0x0F00) >> 8) as usize] = 42 & (self.opcode & 0x00FF) as u8;
+                self.pc += 2;
             }
             // Draws a sprite at coordinate (VX, VY) that
             // has a width of 8 pixels and a height of N pixels.
