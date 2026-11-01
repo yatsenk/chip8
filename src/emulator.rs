@@ -48,7 +48,7 @@ impl Chip8 {
         f.read_to_end(&mut buffer);
 
         // 0x200 = 512
-        self.memory[512..buffer.len() + 512].copy_from_slice(&buffer);
+        self.memory[512..buffer.len()].copy_from_slice(&buffer);
 
         Ok(())
     }
@@ -254,7 +254,7 @@ impl Chip8 {
                     pixel = self.memory[(self.i + yline) as usize] as u16;
                     for xline in 0..8 {
                         if pixel & (0x80 >> xline) != 0
-                            && self.gfx[(x + xline + (y + xline) * 64) as usize] == 1
+                            && self.gfx[(x + xline + (y + yline) * 64) as usize] == 1
                         {
                             self.v[0xF] = 1
                         }
