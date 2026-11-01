@@ -3,7 +3,7 @@ mod emulator;
 
 use core::panic;
 
-use minifb::{Key, KeyRepeat, ScaleMode, Window, WindowOptions};
+use minifb::{Key, KeyRepeat, Scale, ScaleMode, Window, WindowOptions};
 
 fn main() {
     let mut chip8 = emulator::Chip8::new();
@@ -11,12 +11,13 @@ fn main() {
     let mut buffer = vec![0u32; constants::WIDTH * constants::HEIGHT];
     let mut window = Window::new(
         "Chip8 emulator - press ESC to exit",
-        constants::WIDTH * 10,
-        constants::HEIGHT * 10,
+        constants::WIDTH,
+        constants::HEIGHT,
         WindowOptions {
             resize: false,
             scale_mode: ScaleMode::UpperLeft,
-            ..WindowOptions::default()
+            scale: Scale::X16,
+            ..Default::default()
         },
     )
     .unwrap_or_else(|e| {
@@ -24,19 +25,12 @@ fn main() {
     });
 
     window.set_target_fps(60);
-    let mut size = (0, 0);
 
     if let Err(e) = chip8.load("roms/PONG") {
         eprintln!("error occured: {}", e);
     }
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
-        let new_size = window.get_size();
-        if new_size != size {
-            size = new_size;
-            buffer.resize(size.0 * size.1, 0);
-        }
-
         chip8.emulate_cycle();
 
         window
@@ -89,14 +83,10 @@ fn main() {
                 let pixel = chip8.gfx[i] as u32;
                 buffer[i] = (0x00FFFFFF * pixel) | 0xFF000000;
             }
-
-            chip8.gfx = [0; 2048];
         }
 
         window
-            .update_with_buffer(&buffer, new_size.0, new_size.1)
+            .update_with_buffer(&buffer, constants::WIDTH, constants::HEIGHT)
             .unwrap();
-
-        std::thread::sleep(std::time::Duration::from_micros(1200));
     }
 }
