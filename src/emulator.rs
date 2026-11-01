@@ -301,6 +301,7 @@ impl Chip8 {
                     // Sets VX to the value of the delay timer
                     0x0007 => {
                         self.v[((self.opcode & 0x0F00) >> 8) as usize] = self.delay_timer;
+                        self.pc += 2;
                     }
                     // A key press is awaited, and then stored in VX
                     // (blocking operation, all instruction halted until next key event,
