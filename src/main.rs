@@ -26,7 +26,7 @@ fn main() {
     window.set_target_fps(60);
     let mut size = (0, 0);
 
-    if let Err(e) = chip8.load("roms/") {
+    if let Err(e) = chip8.load("roms/PONG") {
         eprintln!("error occured: {}", e);
     }
 
@@ -81,6 +81,17 @@ fn main() {
             Key::F => chip8.keypad[15] = 0,
             _ => panic!("unimplemeted key"),
         });
+
+        if chip8.draw_flag {
+            chip8.draw_flag = false;
+
+            for i in 0..2048 {
+                let pixel = chip8.gfx[i] as u32;
+                buffer[i] = (0x00FFFFFF * pixel) | 0xFF000000;
+            }
+
+            chip8.gfx = [0; 2048];
+        }
 
         window
             .update_with_buffer(&buffer, new_size.0, new_size.1)
