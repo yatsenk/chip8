@@ -47,7 +47,7 @@ impl Chip8 {
         f.read_to_end(&mut buffer)?;
 
         if buffer.len() < RAM - 512 {
-            self.memory[512..buffer.len()].copy_from_slice(&buffer);
+            self.memory[512..buffer.len() + 512].copy_from_slice(&buffer);
         } else {
             panic!("ROM file is too large");
         }
@@ -158,13 +158,9 @@ impl Chip8 {
                     // Adds VY to VX. VF is set to 1 when there's an overflow,
                     // and to 0 when there is not
                     0x0004 => {
-                        self.v[x] += self.v[y];
-                        // Vy > 255 - Vx
-                        if self.v[y] > 0xFF - self.v[x] {
-                            self.v[0xF] = 1;
-                        } else {
-                            self.v[0xF] = 0;
-                        }
+                        let (result, carry) = self.v[x].overflowing_add(self.v[y]);
+                        self.v[x] = result;
+                        self.v[0xF] = carry as u8;
                         self.pc += 2;
                     }
                     // VY is subtracted from VX. VF is set to 0
@@ -257,9 +253,9 @@ impl Chip8 {
                     pixel = self.memory[(self.i + yline) as usize] as u16;
                     for xline in 0..8 {
                         if pixel & (0x80 >> xline) != 0
-                            && self.gfx[(x + xline + (y + yline) * 64) as usize] == 1
+                            && self.gfx[(x + xline + ((y + yline) * 64)) as usize] == 1
                         {
-                            self.v[0xF] = 1
+                            self.v[0xF] = 1;
                         }
                         self.gfx[(x + xline + ((y + yline) * 64)) as usize] ^= 1;
                     }
