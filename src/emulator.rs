@@ -1,5 +1,4 @@
-#![allow(unused)]
-use std::io;
+use rand::Rng;
 use std::path::Path;
 use std::{fs::File, io::Read};
 
@@ -45,7 +44,7 @@ impl Chip8 {
         let mut f = File::open(path_to_file)?;
 
         let mut buffer = vec![];
-        f.read_to_end(&mut buffer);
+        f.read_to_end(&mut buffer)?;
 
         // 0x200 = 512
         self.memory[512..buffer.len() + 512].copy_from_slice(&buffer);
@@ -54,8 +53,8 @@ impl Chip8 {
     }
 
     pub fn emulate_cycle(&mut self) {
-        self.opcode = ((self.memory[self.pc as usize] as u16) << 8
-            | (self.memory[(self.pc + 1) as usize]) as u16);
+        self.opcode = (self.memory[self.pc as usize] as u16) << 8
+            | (self.memory[(self.pc + 1) as usize]) as u16;
 
         match self.opcode & 0xF000 {
             // 00__
@@ -232,8 +231,8 @@ impl Chip8 {
             // operation on a random number
             // (Typically: 0 to 255) and NN
             0xC000 => {
-                // todo: random number instead of 42
-                self.v[((self.opcode & 0x0F00) >> 8) as usize] = 42 & (self.opcode & 0x00FF) as u8;
+                self.v[((self.opcode & 0x0F00) >> 8) as usize] =
+                    rand::random_range(0..255) & (self.opcode & 0x00FF) as u8;
                 self.pc += 2;
             }
             // Draws a sprite at coordinate (VX, VY) that
@@ -247,7 +246,7 @@ impl Chip8 {
             0xD000 => {
                 let x = (self.opcode & 0x0F00) >> 8;
                 let y = (self.opcode & 0x00F0) >> 4;
-                let height = (self.opcode & 0x000F);
+                let height = self.opcode & 0x000F;
                 let mut pixel: u16;
 
                 self.v[0xF] = 0;
