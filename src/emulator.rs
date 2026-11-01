@@ -244,8 +244,8 @@ impl Chip8 {
             // pixels are flipped from set to unset when
             // the sprite is drawn, and to 0 if that does not happen
             0xD000 => {
-                let x = (self.opcode & 0x0F00) >> 8;
-                let y = (self.opcode & 0x00F0) >> 4;
+                let x = self.v[((self.opcode & 0x0F00) >> 8) as usize] as u16;
+                let y = self.v[((self.opcode & 0x00F0) >> 4) as usize] as u16;
                 let height = self.opcode & 0x000F;
                 let mut pixel: u16;
 
