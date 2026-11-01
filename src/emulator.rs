@@ -46,10 +46,8 @@ impl Chip8 {
         let mut buffer = vec![];
         f.read_to_end(&mut buffer)?;
 
-        let buffer_len = buffer.len() + 512;
-
-        if buffer_len < RAM {
-            self.memory[512..buffer_len].copy_from_slice(&buffer);
+        if buffer.len() < RAM - 512 {
+            self.memory[512..buffer.len()].copy_from_slice(&buffer);
         } else {
             panic!("ROM file is too large");
         }
