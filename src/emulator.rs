@@ -363,7 +363,7 @@ impl Chip8 {
                     // each value written, but I itself is left unmodified
                     0x0055 => {
                         for i in 0..=((self.opcode & 0x0F00) >> 8) as usize {
-                            self.memory[(self.i as usize) + 1] = self.v[i];
+                            self.memory[self.i as usize + i] = self.v[i];
                         }
                         // ???
                         self.i += ((self.opcode & 0x0F00) >> 8) + 1;
@@ -374,7 +374,7 @@ impl Chip8 {
                     // for each value read, but I itself is left unmodified
                     0x0065 => {
                         for i in 0..=((self.opcode & 0x0F00) >> 8) as usize {
-                            self.v[i] = self.memory[(self.i as usize) + 1];
+                            self.v[i] = self.memory[self.i as usize + i];
                         }
                         // ???
                         self.i += ((self.opcode & 0x0F00) >> 8) + 1;
