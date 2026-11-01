@@ -6,18 +6,18 @@ use std::{fs::File, io::Read};
 use crate::constants::{FONTSET, HEIGHT, RAM, WIDTH};
 
 pub struct Chip8 {
-    gfx: [u8; WIDTH * HEIGHT],
-    opcode: u16,
+    pub gfx: [u8; WIDTH * HEIGHT],
+    pub opcode: u16,
     pc: u16,
     i: u16,
     v: [u8; 16],
     sp: u16,
     stack: [u16; 16],
     memory: [u8; RAM],
-    keypad: [u16; 16],
-    delay_timer: u8,
-    sound_timer: u8,
-    draw_flag: bool,
+    pub keypad: [u16; 16],
+    pub delay_timer: u8,
+    pub sound_timer: u8,
+    pub draw_flag: bool,
 }
 
 impl Chip8 {
@@ -41,20 +41,19 @@ impl Chip8 {
         }
     }
 
-    fn load<P: AsRef<Path>>(&mut self, path_to_file: P) {
-        let mut f = match File::open(path_to_file) {
-            Ok(f) => f,
-            Err(e) => panic!("cannot open a file: {}", e),
-        };
+    pub fn load<P: AsRef<Path>>(&mut self, path_to_file: P) -> Result<(), std::io::Error> {
+        let mut f = File::open(path_to_file)?;
 
         let mut buffer = vec![];
         f.read_to_end(&mut buffer);
 
         // 0x200 = 512
         self.memory[512..buffer.len()].copy_from_slice(&buffer);
+
+        Ok(())
     }
 
-    fn emulate(&mut self) {
+    pub fn emulate_cycle(&mut self) {
         self.opcode = ((self.memory[self.pc as usize] as u16) << 8
             | (self.memory[(self.pc + 1) as usize]) as u16);
 
