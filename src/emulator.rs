@@ -48,7 +48,7 @@ impl Chip8 {
         f.read_to_end(&mut buffer);
 
         // 0x200 = 512
-        self.memory[512..buffer.len()].copy_from_slice(&buffer);
+        self.memory[512..buffer.len() + 512].copy_from_slice(&buffer);
 
         Ok(())
     }
