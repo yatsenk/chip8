@@ -3,7 +3,7 @@ mod emulator;
 
 use core::panic;
 
-use minifb::{Key, KeyRepeat, Scale, ScaleMode, Window, WindowOptions};
+use minifb::{Key, KeyRepeat, Scale, Window, WindowOptions};
 
 fn main() {
     let mut chip8 = emulator::Chip8::new();
@@ -15,7 +15,6 @@ fn main() {
         constants::HEIGHT,
         WindowOptions {
             resize: false,
-            scale_mode: ScaleMode::UpperLeft,
             scale: Scale::X16,
             ..Default::default()
         },
@@ -53,7 +52,7 @@ fn main() {
                 Key::D => chip8.keypad[13] = 1,
                 Key::E => chip8.keypad[14] = 1,
                 Key::F => chip8.keypad[15] = 1,
-                _ => panic!("unimplemeted key"),
+                _ => println!("unimplemeted key"),
             });
 
         window.get_keys_released().iter().for_each(|key| match key {
@@ -73,7 +72,7 @@ fn main() {
             Key::D => chip8.keypad[13] = 0,
             Key::E => chip8.keypad[14] = 0,
             Key::F => chip8.keypad[15] = 0,
-            _ => panic!("unimplemeted key"),
+            _ => println!("unimplemeted key"),
         });
 
         if chip8.draw_flag {
