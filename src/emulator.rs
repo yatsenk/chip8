@@ -242,19 +242,19 @@ impl Chip8 {
             0xD000 => {
                 let x = self.v[((self.opcode & 0x0F00) >> 8) as usize] as u16;
                 let y = self.v[((self.opcode & 0x00F0) >> 4) as usize] as u16;
-                let height = self.opcode & 0x000F;
+                let n = self.opcode & 0x000F;
                 let mut pixel: u16;
 
                 self.v[0xF] = 0;
-                for yline in 0..height {
+                for yline in 0..n {
                     pixel = self.memory[(self.i + yline) as usize] as u16;
                     for xline in 0..8 {
-                        if pixel & (0x80 >> xline) != 0
-                            && self.gfx[(x + xline + ((y + yline) * WIDTH as u16)) as usize] == 1
-                        {
+                        let idx = (x + xline + ((y + yline) * WIDTH as u16)) as usize;
+
+                        if pixel & (0x80 >> xline) != 0 && self.gfx[idx] == 1 {
                             self.v[0xF] = 1;
                         }
-                        self.gfx[(x + xline + ((y + yline) * WIDTH as u16)) as usize] ^= 1;
+                        self.gfx[idx] ^= 1;
                     }
                 }
 
