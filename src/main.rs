@@ -1,8 +1,6 @@
 mod constants;
 mod emulator;
 
-use core::panic;
-
 use minifb::{Key, KeyRepeat, Scale, Window, WindowOptions};
 
 fn main() {
@@ -23,12 +21,16 @@ fn main() {
         panic!("{}", e);
     });
 
+    window.set_target_fps(60);
+
     if let Err(e) = chip8.load("roms/PONG") {
         eprintln!("error occured: {}", e);
     }
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
-        chip8.emulate_cycle();
+        for _ in 0..10 {
+            chip8.emulate_cycle();
+        }
 
         window
             .get_keys_pressed(KeyRepeat::No)
@@ -85,7 +87,5 @@ fn main() {
         window
             .update_with_buffer(&buffer, constants::WIDTH, constants::HEIGHT)
             .unwrap();
-
-        std::thread::sleep(std::time::Duration::from_micros(1200));
     }
 }
