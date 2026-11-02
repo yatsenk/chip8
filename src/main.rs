@@ -23,8 +23,6 @@ fn main() {
         panic!("{}", e);
     });
 
-    window.set_target_fps(60);
-
     if let Err(e) = chip8.load("roms/PONG") {
         eprintln!("error occured: {}", e);
     }
@@ -52,7 +50,7 @@ fn main() {
                 Key::D => chip8.keypad[13] = 1,
                 Key::E => chip8.keypad[14] = 1,
                 Key::F => chip8.keypad[15] = 1,
-                _ => println!("unimplemeted key"),
+                _ => (),
             });
 
         window.get_keys_released().iter().for_each(|key| match key {
@@ -72,7 +70,7 @@ fn main() {
             Key::D => chip8.keypad[13] = 0,
             Key::E => chip8.keypad[14] = 0,
             Key::F => chip8.keypad[15] = 0,
-            _ => println!("unimplemeted key"),
+            _ => (),
         });
 
         if chip8.draw_flag {
@@ -87,5 +85,7 @@ fn main() {
         window
             .update_with_buffer(&buffer, constants::WIDTH, constants::HEIGHT)
             .unwrap();
+
+        std::thread::sleep(std::time::Duration::from_micros(1200));
     }
 }
