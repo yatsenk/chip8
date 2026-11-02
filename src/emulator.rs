@@ -169,7 +169,7 @@ impl Chip8 {
                     0x0005 => {
                         let (result, carry) = self.v[x].overflowing_sub(self.v[y]);
                         self.v[x] = result;
-                        self.v[0xF] = carry as u8;
+                        self.v[0xF] = !carry as u8;
                         self.pc += 2;
                     }
                     // Shifts VX to the right by 1, then stores the least
@@ -228,7 +228,7 @@ impl Chip8 {
             // (Typically: 0 to 255) and NN
             0xC000 => {
                 self.v[((self.opcode & 0x0F00) >> 8) as usize] =
-                    rand::random_range(0..255) & (self.opcode & 0x00FF) as u8;
+                    rand::random::<u8>() & (self.opcode & 0x00FF) as u8;
                 self.pc += 2;
             }
             // Draws a sprite at coordinate (VX, VY) that
