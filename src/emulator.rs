@@ -251,10 +251,12 @@ impl Chip8 {
                     for xline in 0..8 {
                         let idx = (x + xline + ((y + yline) * WIDTH as u16)) as usize;
 
-                        if pixel & (0x80 >> xline) != 0 && self.gfx[idx] == 1 {
-                            self.v[0xF] = 1;
+                        if pixel & (0x80 >> xline) != 0 {
+                            if self.gfx[idx] == 1 {
+                                self.v[0xF] = 1;
+                            }
+                            self.gfx[idx] ^= 1;
                         }
-                        self.gfx[idx] ^= 1;
                     }
                 }
 
@@ -382,7 +384,9 @@ impl Chip8 {
             }
             _ => panic!("unimplemented opcode"),
         }
+    }
 
+    pub fn on_tick(&mut self) {
         if self.delay_timer > 0 {
             self.delay_timer -= 1;
         }
