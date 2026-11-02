@@ -31,6 +31,7 @@ fn main() {
         for _ in 0..10 {
             chip8.emulate_cycle();
         }
+        chip8.on_tick();
 
         window
             .get_keys_pressed(KeyRepeat::No)
