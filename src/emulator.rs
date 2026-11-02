@@ -1,4 +1,3 @@
-use rand::Rng;
 use std::path::Path;
 use std::{fs::File, io::Read};
 
@@ -126,7 +125,8 @@ impl Chip8 {
             }
             // Adds NN to VX (carry flag is not changed)
             0x7000 => {
-                self.v[((self.opcode & 0x0F00) >> 8) as usize] += (self.opcode & 0x00FF) as u8;
+                let x = ((self.opcode & 0x0F00) >> 8) as usize;
+                self.v[x] = self.v[x].wrapping_add((self.opcode & 0x00FF) as u8);
                 self.pc += 2;
             }
             // 8XY_
@@ -167,12 +167,9 @@ impl Chip8 {
                     // when there's an underflow, and 1 when there is not.
                     // (i.e. VF set to 1 if VX >= VY and 0 if not)
                     0x0005 => {
-                        if self.v[x] >= self.v[y] {
-                            self.v[0xF] = 1;
-                        } else {
-                            self.v[0xF] = 0;
-                        }
-                        self.v[x] -= self.v[y];
+                        let (result, carry) = self.v[x].overflowing_sub(self.v[y]);
+                        self.v[x] = result;
+                        self.v[0xF] = carry as u8;
                         self.pc += 2;
                     }
                     // Shifts VX to the right by 1, then stores the least
@@ -253,11 +250,11 @@ impl Chip8 {
                     pixel = self.memory[(self.i + yline) as usize] as u16;
                     for xline in 0..8 {
                         if pixel & (0x80 >> xline) != 0
-                            && self.gfx[(x + xline + ((y + yline) * 64)) as usize] == 1
+                            && self.gfx[(x + xline + ((y + yline) * WIDTH as u16)) as usize] == 1
                         {
                             self.v[0xF] = 1;
                         }
-                        self.gfx[(x + xline + ((y + yline) * 64)) as usize] ^= 1;
+                        self.gfx[(x + xline + ((y + yline) * WIDTH as u16)) as usize] ^= 1;
                     }
                 }
 
@@ -397,12 +394,4 @@ impl Chip8 {
             self.sound_timer -= 1;
         }
     }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test() {}
 }
