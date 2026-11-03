@@ -251,7 +251,7 @@ impl Chip8 {
                     for xline in 0..8 {
                         let idx = (x + xline + ((y + yline) * WIDTH as u16)) as usize;
 
-                        if pixel & (0x80 >> xline) != 0 {
+                        if pixel & (0x80 >> xline) != 0 && idx <= 2048 {
                             if self.gfx[idx] == 1 {
                                 self.v[0xF] = 1;
                             }
